@@ -198,13 +198,47 @@ def calculate_e_actual(data)
   return data
 end
 
+def calculate_relh(data)
+  if data[:headers].include?("E_ACTUAL") && data[:headers].include?("E_SATURATED")
+    num_rows = data[:data].count
+    for i in 0...num_rows
+      if data[:data][i][:E_ACTUAL].nil? || data[:data][i][:E_ACTUAL].strip.empty? ||data[:data][i][:E_SATURATED].nil? || data[:data][i][:E_SATURATED].strip.empty? 
+        data[:data][i][:RELH_CALCULATED] = ""
+      else
+        data[:data][i][:RELH_CALCULATED] = (100 * (data[:data][i][:E_ACTUAL].to_f / data[:data][i][:E_SATURATED].to_f)).to_s
+      end
+    end
+    data[:headers].push("RELH_CALCULATED")
+  end
+  return data
+end
+
+def calculate_relh_error(data)
+  if data[:headers].include?("TMPF") && data[:headers].include?("DWPF") && data[:headers].include?("RELH")
+    num_rows = data[:data].count
+    for i in 0...num_rows
+      if data[:data][i][:RELH].nil? || data[:data][i][:RELH].strip.empty? ||data[:data][i][:RELH_CALCULATED].nil? || data[:data][i][:RELH_CALCULATED].strip.empty? 
+        data[:data][i][:RELH_ERROR] = ""
+        data[:data][i][:RELH_REL_ERROR] = ""
+      else
+        error = data[:data][i][:RELH_CALCULATED].to_f - data[:data][i][:RELH].to_f
+        data[:data][i][:RELH_ERROR] = error.to_s
+        data[:data][i][:RELH_REL_ERROR] = (error / data[:data][i][:RELH].to_f).to_s
+      end
+    end
+    data[:headers].push("RELH_ERROR")
+    data[:headers].push("RELH_REL_ERROR")
+  end
+  return data
+end
+
 def filter(data)
   delete_list = %w[FT QFLG]
   data[:headers] -= delete_list
   
   num_rows = data[:data].count  
   
-  # Remove blank columns
+  # Remove sparse columns
   data = remove_sparse_cols(data)
   
   # Threshold SOLR
@@ -216,6 +250,10 @@ def filter(data)
   # Find specific humidity values
   data = calculate_e_saturated(data)
   data = calculate_e_actual(data)
+  
+  # Calculate RELH and the error
+  data = calculate_relh(data)
+  data = calculate_relh_error(data)
   
   # Delta PREC
   data = delta_prec(data)  if data[:headers].include?("PREC")
@@ -465,7 +503,7 @@ end
 def fill_in_missing(data, options={})
   ignore_list = %w[YEAR MON DAY HR MIN PENTAD TMZN]
   valid_negative = %w[SKNT_E SKNT_N PEAK_E PEAK_N GUST_E GUST_N DRCT PDIR]
-  generated_fields = %w[SKNT_E SKNT_N PEAK_E PEAK_N GUST_E GUST_N TTD E_SATURATED E_ACTUAL]
+  generated_fields = %w[SKNT_E SKNT_N PEAK_E PEAK_N GUST_E GUST_N TTD E_SATURATED E_ACTUAL RELH_CALCULATED RELH_ERROR RELH_REL_ERROR]
   options = { :max_interpolation => 5, :max_adjacent => 2 }.merge(options)  
   valid_columns = (data[:headers] - ignore_list)
   pentad_means = find_pentad_means(data)
@@ -590,25 +628,37 @@ def fill_in_missing(data, options={})
           row = data[:data][i]
           ttd = (row[:TMPF].to_f - row[:DWPF].to_f)
           ttd = 0 if ttd < 0
-          data[:data][i][:TTD] = ttd.to_s
+          data[:data][i][header_sym] = ttd.to_s
         end
       end
     when "E_SATURATED"
       found_gaps.each do |gap|
         gap[:gap_indexes].each do |i|
           row = data[:data][i]
-          data[:data][i][:E_SATURATED] = e_sat(row[:TMPF].to_f).to_s
+          data[:data][i][header_sym] = e_sat(row[:TMPF].to_f).to_s
         end
       end
     when "E_ACTUAL"
       found_gaps.each do |gap|
         gap[:gap_indexes].each do |i|
           row = data[:data][i]
-          data[:data][i][:E_ACTUAL] = e_sat(row[:DWPF].to_f).to_s
+          data[:data][i][header_sym] = e_sat(row[:DWPF].to_f).to_s
         end
       end
     end
   end
   
+  if gaps.keys.include?("RELH_CALCULATED")
+    found_gaps = gaps["RELH_CALCULATED"]
+    found_gaps.each do |gap|
+        gap[:gap_indexes].each do |i|
+          row = data[:data][i]
+          data[:data][i][:RELH_CALCULATED] = (row[:E_ACTUAL].to_f / row[:E_SATURATED].to_f * 100).to_s
+          data[:data][i][:RELH_ERROR] = (row[:RELH_CALCULATED].to_f - row[:RELH].to_f).to_s
+          data[:data][i][:RELH_REL_ERROR] = (row[:RELH_ERROR].to_f / row[:RELH].to_f).to_s
+        end
+      end
+  end
+ 
   return data
 end

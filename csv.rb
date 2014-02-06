@@ -28,7 +28,7 @@ def load_header_csv(path)
   end
   headers = headers.merge({
     :E_SATURATED => { :description => "Saturation Vapor Pressure", :unit =>  "hPa" },
-    :E_Actual => { :description => "Actual Vapor Pressure", :unit =>  "hPa" },
+    :E_ACTUAL => { :description => "Actual Vapor Pressure", :unit =>  "hPa" },
     :SKNT_E => { :description => "Wind Velocity in the East Direction", :unit =>  "mph" },
     :SKNT_N => { :description => "Wind Velocity in the North Direction", :unit =>  "mph" },
     :PEAK_E => { :description => "Peak Wind Velocity in the East Direction", :unit =>  "mph" },    
@@ -36,7 +36,10 @@ def load_header_csv(path)
     :GUST_E => { :description => "Gust Wind Velocity in the East Direction", :unit =>  "mph" },    
     :GUST_N => { :description => "Gust Wind Velocity in the North Direction", :unit =>  "mph" },
     :TTD => { :description => "Difference between Temperature and Dew Point", :unit => "degrees F" },
-    :DWPF => { :description => "Dew Point", :unit => "degrees F" }
+    :DWPF => { :description => "Dew Point", :unit => "degrees F" },
+    :RELH_CALCULATED => { :description => "Calculated Relative Humidity", :unit => "%" },
+    :RELH_ERROR => { :description => "Error between observed and calculated relative humidity", :unit => "%" },
+    :RELH_REL_ERROR => { :description => "Relative Error between observed and calculated relative humidity", :unit => "" }
   })
   return(headers)
 end
