@@ -1,6 +1,8 @@
 require 'bsearch'
 require 'spliner'
 
+puts "Loading data_filter.rb..."
+
 def trim(data)
   data[:data] = [data[:data].first, data[:data].last]
   return data
@@ -12,15 +14,15 @@ end
 
 def remove_sparse_cols(data, min_percent=0.5)
   num_rows = data[:data].count
-  
+
   missing_counts = {}
   for i in 0...num_rows
-    data[:headers].each do |header|      
+    data[:headers].each do |header|
       if !data[:data][i][header.to_sym].strip.empty?
         if missing_counts[header].nil?
-          missing_counts[header] = 1
+        missing_counts[header] = 1
         else
-          missing_counts[header] += 1
+        missing_counts[header] += 1
         end
       end
     end
@@ -28,7 +30,7 @@ def remove_sparse_cols(data, min_percent=0.5)
   blank_columns = []
   missing_counts.each do |header, num_missing|
     if num_missing / num_rows.to_f < min_percent
-      blank_columns.push(header)
+    blank_columns.push(header)
     end
   end
   puts "Removing: #{blank_columns.inspect}"
@@ -37,23 +39,23 @@ def remove_sparse_cols(data, min_percent=0.5)
 end
 
 def threshold_solr(data, threshold = 10)
-    num_rows = data[:data].count  
-    for i in 0...num_rows
-      data[:data][i][:SOLR] = "0" if !data[:data][i][:SOLR].strip.empty? && data[:data][i][:SOLR].to_f < 10
-    end
-    return data
+  num_rows = data[:data].count
+  for i in 0...num_rows
+    data[:data][i][:SOLR] = "0" if !data[:data][i][:SOLR].strip.empty? && data[:data][i][:SOLR].to_f < 10
+  end
+  return data
 end
 
 def delta_prec(data)
-  num_rows = data[:data].count 
-  
+  num_rows = data[:data].count
+
   previous = data[:data].first[:PREC]
   for i in 1...num_rows
     if !data[:data][i][:PREC].strip.empty?
       previous = "0" if data[:data][i - 1][:PREC].strip.empty?
       difference = data[:data][i][:PREC].to_f - previous.to_f
       previous = data[:data][i][:PREC]
-      data[:data][i][:PREC] = difference.to_s unless difference < 0        
+      data[:data][i][:PREC] = difference.to_s unless difference < 0
     end
   end
   return data
@@ -61,27 +63,27 @@ end
 
 def convert_wind_directions(data)
   if data[:headers].include?("DRCT") || data[:headers].include?("PDIR")
-    num_rows = data[:data].count     
+    num_rows = data[:data].count
     for i in 0...num_rows
       unless data[:data][i][:DRCT].nil? || data[:data][i][:DRCT].strip.empty?
         data[:data][i][:DRCT] = (data[:data][i][:DRCT].to_f + 90) % 360
-        data[:data][i][:DRCT] -= 360 if data[:data][i][:DRCT] > 180 
+        data[:data][i][:DRCT] -= 360 if data[:data][i][:DRCT] > 180
         data[:data][i][:DRCT] = data[:data][i][:DRCT].to_s
       end
-      
+
       unless data[:data][i][:PDIR].nil? || data[:data][i][:PDIR].strip.empty?
         data[:data][i][:PDIR] = (data[:data][i][:PDIR].to_i + 90) % 360
-        data[:data][i][:PDIR] -= 360 if data[:data][i][:PDIR] > 180 
+        data[:data][i][:PDIR] -= 360 if data[:data][i][:PDIR] > 180
         data[:data][i][:PDIR] = data[:data][i][:PDIR].to_s
-      end
+      end
     end
   end
   return data
 end
 
 def convert_wind(data)
-  if (include_sknt = data[:headers].include?("SKNT") || include_gust = data[:headers].include?("GUST"))&& data[:headers].include?("DRCT")  
-    num_rows = data[:data].count     
+  if (include_sknt = data[:headers].include?("SKNT") || include_gust = data[:headers].include?("GUST"))&& data[:headers].include?("DRCT")
+    num_rows = data[:data].count
     for i in 0...num_rows
       if data[:data][i][:DRCT].strip.empty?
         if include_sknt
@@ -123,7 +125,7 @@ def convert_wind(data)
 end
 
 def convert_peak(data)
-  num_rows = data[:data].count     
+  num_rows = data[:data].count
   for i in 0...num_rows
     if data[:data][i][:PDIR].strip.empty?
       data[:data][i][:PEAK_E] = ""
@@ -146,7 +148,7 @@ end
 
 def convert_ttd(data)
   if data[:headers].include?("TMPF") && data[:headers].include?("DWPF")
-    num_rows = data[:data].count     
+    num_rows = data[:data].count
     for i in 0...num_rows
       if data[:data][i][:TMPF].nil? || data[:data][i][:TMPF].strip.empty? || data[:data][i][:DWPF].nil? || data[:data][i][:DWPF].strip.empty?
         data[:data][i][:TTD] = ""
@@ -170,9 +172,9 @@ end
 
 def calculate_e_saturated(data)
   if data[:headers].include?("TMPF")
-    num_rows = data[:data].count     
+    num_rows = data[:data].count
     for i in 0...num_rows
-      if data[:data][i][:TMPF].nil? || data[:data][i][:TMPF].strip.empty? 
+      if data[:data][i][:TMPF].nil? || data[:data][i][:TMPF].strip.empty?
         data[:data][i][:E_SATURATED] = ""
       else
         data[:data][i][:E_SATURATED] = e_sat(data[:data][i][:TMPF].to_f).to_s
@@ -185,9 +187,9 @@ end
 
 def calculate_e_actual(data)
   if data[:headers].include?("DWPF")
-    num_rows = data[:data].count     
+    num_rows = data[:data].count
     for i in 0...num_rows
-      if data[:data][i][:DWPF].nil? || data[:data][i][:DWPF].strip.empty? 
+      if data[:data][i][:DWPF].nil? || data[:data][i][:DWPF].strip.empty?
         data[:data][i][:E_ACTUAL] = ""
       else
         data[:data][i][:E_ACTUAL] = e_sat(data[:data][i][:DWPF].to_f).to_s
@@ -202,7 +204,7 @@ def calculate_relh(data)
   if data[:headers].include?("E_ACTUAL") && data[:headers].include?("E_SATURATED")
     num_rows = data[:data].count
     for i in 0...num_rows
-      if data[:data][i][:E_ACTUAL].nil? || data[:data][i][:E_ACTUAL].strip.empty? ||data[:data][i][:E_SATURATED].nil? || data[:data][i][:E_SATURATED].strip.empty? 
+      if data[:data][i][:E_ACTUAL].nil? || data[:data][i][:E_ACTUAL].strip.empty? ||data[:data][i][:E_SATURATED].nil? || data[:data][i][:E_SATURATED].strip.empty?
         data[:data][i][:RELH_CALCULATED] = ""
       else
         data[:data][i][:RELH_CALCULATED] = (100 * (data[:data][i][:E_ACTUAL].to_f / data[:data][i][:E_SATURATED].to_f)).to_s
@@ -217,7 +219,7 @@ def calculate_relh_error(data)
   if data[:headers].include?("TMPF") && data[:headers].include?("DWPF") && data[:headers].include?("RELH")
     num_rows = data[:data].count
     for i in 0...num_rows
-      if data[:data][i][:RELH].nil? || data[:data][i][:RELH].strip.empty? ||data[:data][i][:RELH_CALCULATED].nil? || data[:data][i][:RELH_CALCULATED].strip.empty? 
+      if data[:data][i][:RELH].nil? || data[:data][i][:RELH].strip.empty? ||data[:data][i][:RELH_CALCULATED].nil? || data[:data][i][:RELH_CALCULATED].strip.empty?
         data[:data][i][:RELH_ERROR] = ""
         data[:data][i][:RELH_REL_ERROR] = ""
       else
@@ -235,34 +237,34 @@ end
 def filter(data)
   delete_list = %w[FT QFLG]
   data[:headers] -= delete_list
-  
-  num_rows = data[:data].count  
-  
+
+  num_rows = data[:data].count
+
   # Remove sparse columns
   data = remove_sparse_cols(data)
-  
+
   # Threshold SOLR
   data = threshold_solr(data) if data[:headers].include?("SOLR")
-  
+
   # Find TTD values
   data = convert_ttd(data)
-  
+
   # Find specific humidity values
   data = calculate_e_saturated(data)
   data = calculate_e_actual(data)
-  
+
   # Calculate RELH and the error
   data = calculate_relh(data)
   data = calculate_relh_error(data)
-  
+
   # Delta PREC
   data = delta_prec(data)  if data[:headers].include?("PREC")
 
   # Convert Wind / Gust data
   data = convert_wind(data)
-  
+
   # Convert Peak Wind data
-  data = convert_peak(data) if data[:headers].include?("PEAK") && data[:headers].include?("PDIR")  
+  data = convert_peak(data) if data[:headers].include?("PEAK") && data[:headers].include?("PDIR")
 
   # Convert Wind Directions
   data = convert_wind_directions(data)
@@ -274,18 +276,18 @@ def get_poll_interval(data)
   for i in 1...data[:data].count
     interval = data[:data][i][:DATE_TIME] - data[:data][i - 1][:DATE_TIME]
     if intervals[interval].nil?
-      intervals[interval] = 1
+    intervals[interval] = 1
     else
-      intervals[interval] += 1
-    end
+    intervals[interval] += 1
+    end
   end
   mode = nil
   mode_count = nil
   intervals.each do |interval, count|
     if mode_count.nil? || count > mode_count
-      mode = interval
-      mode_count = count
-    end    
+    mode = interval
+    mode_count = count
+    end
   end
   data[:interval] = mode
   return data
@@ -295,7 +297,7 @@ def shift_times(data)
   data = get_poll_interval(data) if data[:interval].nil?
   interval = data[:interval] / 60
   half_interval = interval / 2
-  
+
   # Shift each data point to the nearest expected point in time
   data_map = {}
   data[:data].each do |row|
@@ -304,7 +306,7 @@ def shift_times(data)
     if mod < half_interval
       row[:DATE_TIME] -= (mod * 60)
     else
-      row[:DATE_TIME] += ((interval - mod) * 60)
+    row[:DATE_TIME] += ((interval - mod) * 60)
     end
     row[:HR] = row[:DATE_TIME].hour
     row[:MIN] = row[:DATE_TIME].min
@@ -312,12 +314,12 @@ def shift_times(data)
     row[:MON] = row[:DATE_TIME].month
     row[:YEAR] = row[:DATE_TIME].year
     row[:OLD_TIME] = old_time
-    
+
     # Map each row by time to make finding duplicates faster
     data_map[row[:DATE_TIME]] = [] if data_map[row[:DATE_TIME]].nil?
     data_map[row[:DATE_TIME]].push(row)
   end
-  
+
   ignore_columns = %w[MON DAY YEAR HR MIN TMZN]
   valid_columns = (data[:headers] - ignore_columns).map { |header| header.to_sym }
   final_data = []
@@ -326,7 +328,7 @@ def shift_times(data)
   data_map.keys.sort!.each do |time|
     rows = data_map[time]
     if rows.count == 1
-      final_data.push(rows.first)
+    final_data.push(rows.first)
     else
       result = nil
       if block_given?
@@ -334,16 +336,16 @@ def shift_times(data)
       else
         result = average_duplicates(rows, :valid_columns => valid_columns)
       end
-      final_data.push(result)
+    final_data.push(result)
     end
     puts "#{i} / #{num_times}"
     i += 1
   end
   data[:data] = final_data
-  
+
   # Remove Feb 29
   data[:data].delete_if { |row| row[:MON].to_i == 2 && row[:DAY].to_i == 29 }
-  
+
   data[:data] = data[:data].sort_by! { |datum| datum[:DATE_TIME] }
   return data
 end
@@ -356,12 +358,12 @@ def average_duplicates(rows, options={})
   rows.each do |row|
     options[:valid_columns].each do |column|
       unless row[column].strip.empty?
-        if sums[column].nil? 
-          sums[column] = row[column].to_f
-          counts[column] = 1
+        if sums[column].nil?
+        sums[column] = row[column].to_f
+        counts[column] = 1
         else
-          sums[column] += row[column].to_f
-          counts[column] += 1
+        sums[column] += row[column].to_f
+        counts[column] += 1
         end
       end
     end
@@ -382,12 +384,12 @@ def choose_closest(rows, options={})
   closest_difference = nil
   rows.each do |row|
     if closest.nil?
-      closest = row
+    closest = row
     else
       diff = (row[:OLD_TIME] - row[:DATE_TIME]).abs
       if closest_diff.nil? || diff < closest_diff
-        closest = row
-        closest_diff = diff
+      closest = row
+      closest_diff = diff
       end
     end
   end
@@ -405,9 +407,9 @@ def add_missing(data)
   data[:headers].each do |header|
     empty_hash[header.to_sym] = ""
   end
-  
+
   while start_time != end_time
-    if start_time.month != 2 && start_time.day != 29 && times.bsearch { |x| x <=> start_time }.nil?
+    if !(start_time.month == 2 && start_time.day == 29) && times.bsearch { |x| x <=> start_time }.nil?
       blank_row = empty_hash.clone
       blank_row[:YEAR] = start_time.year.to_s
       blank_row[:MON] = start_time.month.to_s
@@ -421,12 +423,157 @@ def add_missing(data)
     end
     start_time += interval
   end
-  
+
   data[:data] = data[:data].sort_by! { |datum| datum[:DATE_TIME] }
   return data
 end
 
+def get_pentad_hash_row(pentad_hash, month, day, hour, minute)
+  pentad_hash[month] = [] if pentad_hash[month].nil?
+  pentad_hash[month][day] = [] if pentad_hash[month][day].nil?
+  pentad_hash[month][day][hour] = {} if pentad_hash[month][day][hour].nil?
+  pentad_hash[month][day][hour][minute] = { :rows => [] } if pentad_hash[month][day][hour][minute].nil?
+  return pentad_hash[month][day][hour][minute][:rows]
+end
+
+def find_running_pentad(data)
+  ignore_list = %w[YEAR MON DAY HR MIN PENTAD TMZN]
+  pentad_hash = []
+  data[:data].each do |row|
+    month = row[:MON].to_i
+    day = row[:DAY].to_i
+    hour = row[:HR].to_i
+    minute = row[:MIN].to_i
+    pentad_hash[month] = [] if pentad_hash[month].nil?
+    pentad_hash[month][day] = [] if pentad_hash[month][day].nil?
+    pentad_hash[month][day][hour] = {} if pentad_hash[month][day][hour].nil?
+    pentad_hash[month][day][hour][minute] = { :rows => [] } if pentad_hash[month][day][hour][minute].nil?
+    pentad_hash[month][day][hour][minute][:rows].push(row)
+  end
+
+  current_time = Time.new(2014, 1, 1)
+  end_time = Time.new(2015, 1, 1)
+  interval = data[:interval]
+
+  one_day = 60 * 60 * 24
+  while current_time < end_time
+
+    month = current_time.month
+    day = current_time.day
+    hour = current_time.hour
+    minute = current_time.min
+
+    ahead_2 = current_time - (2 * one_day)
+    ahead_2 = nil if ahead_2.year != 2014
+    ahead_1 = current_time - one_day
+    ahead_1 = nil if ahead_1.year != 2014
+    after_1 = current_time + one_day
+    after_1 = nil if after_1.year != 2014
+    after_2 = current_time + (2 * one_day)
+    after_2 = nil if after_2.year != 2015
+
+    pentad_hash[month] = [] if pentad_hash[month].nil?
+    pentad_hash[month][day] = [] if pentad_hash[month][day].nil?
+    pentad_hash[month][day][hour] = {} if pentad_hash[month][day][hour].nil?
+    pentad_hash[month][day][hour][minute] = { :rows => [] } if pentad_hash[month][day][hour][minute].nil?
+    
+    pentad_hash[month][day][hour][minute][:pentad] = get_pentad_hash_row(pentad_hash, month, day, hour, minute).clone
+    pentad_hash[month][day][hour][minute][:pentad] += get_pentad_hash_row(pentad_hash, ahead_2.month, ahead_2.day, ahead_2.hour, ahead_2.min) unless ahead_2.nil?
+    pentad_hash[month][day][hour][minute][:pentad] += get_pentad_hash_row(pentad_hash, ahead_1.month, ahead_1.day, ahead_1.hour, ahead_1.min) unless ahead_1.nil?
+    pentad_hash[month][day][hour][minute][:pentad] += get_pentad_hash_row(pentad_hash, after_1.month, after_1.day, after_1.hour, after_1.min) unless after_1.nil?
+    pentad_hash[month][day][hour][minute][:pentad] += get_pentad_hash_row(pentad_hash, after_2.month, after_2.day, after_2.hour, after_2.min) unless after_2.nil?
+
+
+    current_time += interval
+  end
+
+  return pentad_hash
+end
+
+def find_running_pentad_mean(pentad_hash, column, month, day, hour, minute)
+  if pentad_hash[month][day][hour][minute][:means].nil? || pentad_hash[month][day][hour][minute][:means][column].nil?
+    sum = 0
+    count = 0
+    pentad_hash[month][day][hour][minute][:pentad].each do |row|
+      value = row[column.to_sym]
+      unless value.strip.empty?
+      sum += value.to_f
+      count += 1
+      end
+    end
+    pentad_hash[month][day][hour][minute][:means] = {} if pentad_hash[month][day][hour][minute][:means].nil?
+    mean = count == 0 ? 0 : (sum / count)
+    mean = 0 if column == "SOLR" && mean < 10
+    pentad_hash[month][day][hour][minute][:means][column] = mean.to_s
+  else
+    pentad_hash[month][day][hour][minute][:means][column]
+  end
+end
+
+def set_max_solr(pentad_hash)
+  pentad_hash.each_index do |month|
+    days = pentad_hash[month]
+
+    unless days.nil?
+      days.each_index do |day|
+        hours = pentad_hash[month][day]
+        unless hours.nil?
+          hours.each_index do |hour|
+            mins = pentad_hash[month][day][hour]
+            unless mins.nil?
+              mins.each do |min, data|
+                max = 0
+                data[:pentad].each do |row|
+                  if row[:SOLR] && row[:SOLR].to_f > max
+                    max = row[:SOLR].to_f
+                  end
+                end
+                pentad_hash[month][day][hour][min][:max_solr] = max
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  return pentad_hash
+end
+
+def set_solr_fraction(data, pentad_hash)
+  pentad_hash = set_max_solr(pentad_hash)
+  for i in 0...data[:data].count
+    row = data[:data][i]
+    month = pentad_hash[row[:MON].to_i]
+    if month.nil?
+      raise "Month: #{row[:MON].to_i}\n#{pentad_hash.inspect}"
+    else
+      day = month[row[:DAY].to_i]
+      if day.nil?
+        raise "Day: #{row[:DAY].to_i}\n#{month.inspect}"
+      else
+        hour = day[row[:HR].to_i]
+        if hour.nil?
+          raise "Hour: #{row[:HR].to_i}\n#{day.inspect}"
+        else
+          minute = hour[row[:MIN].to_i]
+          if minute.nil?
+            raise "Min: #{row[:MIN].to_i}\n#{hour.inspect}"
+          else
+            max = minute[:max_solr]
+            data[:data][i][:SOLR_MAX] = max.to_s
+            data[:data][i][:SOLR_FRAC] = max == 0 ? "0" : (data[:data][i][:SOLR].to_f / max).to_s
+          end
+        end
+      end
+    end
+  end
+  data[:headers].push("SOLR_FRAC", "SOLR_MAX")
+  return data
+end
+
 # TODO Generalize to min?
+
 def find_pentad_means(data)
   ignore_list = %w[YEAR MON DAY HR MIN PENTAD TMZN]
   data = set_pentads(data) unless data[:headers].include?("PENTAD")
@@ -436,30 +583,30 @@ def find_pentad_means(data)
     pentad_hash[pentad] = [] if pentad_hash[pentad].nil?
     pentad_hash[pentad].push(row)
   end
-  
+
   means = {}
   valid_columns = (data[:headers] - ignore_list)
-  
+
   pentad_hash.keys.each do |pentad|
     means[pentad] = {}
     rows = pentad_hash[pentad]
-    rows.each do |row|  
+    rows.each do |row|
       valid_columns.each do |header|
         means[pentad][header] = [] if means[pentad][header].nil?
         value = row[header.to_sym]
         hour = row[:HR].to_i
         unless value.strip.empty?
           if means[pentad][header][hour].nil?
-            means[pentad][header][hour] = { :sum => value.to_f, :count => 1 }          
+            means[pentad][header][hour] = { :sum => value.to_f, :count => 1 }
           else
-            means[pentad][header][hour][:sum] += value.to_f
+          means[pentad][header][hour][:sum] += value.to_f
             means[pentad][header][hour][:count] += 1
           end
         end
       end
     end
     valid_columns.each do |header|
-      (0..23).each do |i|
+    (0..23).each do |i|
         if means[pentad][header][i].nil?
           means[pentad][header][i] = ""
         else
@@ -478,7 +625,7 @@ def find_gaps(data)
   valid_columns.each do |header|
     gaps[header] = []
   end
-  
+
   num_rows = data[:data].count
   for i in 0...num_rows
     time = data[:data][i][:DATE_TIME]
@@ -486,16 +633,16 @@ def find_gaps(data)
       if data[:data][i][header.to_sym].strip.empty?
         if gaps[header].last.nil? || !gaps[header].last[:running]
           # Start of a new gap
-          gaps[header].push( { :gap_indexes => [i], :running => true } ) 
+          gaps[header].push( { :gap_indexes => [i], :running => true } )
         else
-          # Add to running gap
+        # Add to running gap
           gaps[header].last[:gap_indexes].push(i)
         end
       else
-        # Close running gap
+      # Close running gap
         gaps[header].last[:running] = false if !gaps[header].last.nil? && gaps[header].last[:running]
       end
-    end
+    end
   end
   return gaps
 end
@@ -504,34 +651,30 @@ def fill_in_missing(data, options={})
   ignore_list = %w[YEAR MON DAY HR MIN PENTAD TMZN]
   valid_negative = %w[SKNT_E SKNT_N PEAK_E PEAK_N GUST_E GUST_N DRCT PDIR]
   generated_fields = %w[SKNT_E SKNT_N PEAK_E PEAK_N GUST_E GUST_N TTD E_SATURATED E_ACTUAL RELH_CALCULATED RELH_ERROR RELH_REL_ERROR]
-  options = { :max_interpolation => 5, :max_adjacent => 2 }.merge(options)  
+  options = { :interpolation => false, :max_interpolation => -1, :max_adjacent => 2 }.merge(options)
   valid_columns = (data[:headers] - ignore_list)
-  pentad_means = find_pentad_means(data)
+  pentad_hash = find_running_pentad(data)
   gaps = find_gaps(data)
   last_index = data[:data].count - 1
-  
+
   num_gaps = gaps.values.reduce(0) {|total, found_gaps| total += found_gaps.count}
   count = 1
   (gaps.keys - generated_fields).each do |header|
     header_sym = header.to_sym
     found_gaps = gaps[header]
     found_gaps.each do |gap|
-      if gap[:gap_indexes].count > options[:max_interpolation] || gap[:gap_indexes].first == 0 || gap[:gap_indexes].last == last_index
+      if !options[:interpolation] || gap[:gap_indexes].count > options[:max_interpolation] || gap[:gap_indexes].first == 0 || gap[:gap_indexes].last == last_index
         gap[:gap_indexes].each do |i|
           row = data[:data][i]
-          data[:data][i][header_sym] = pentad_means[row[:PENTAD]][header][row[:HR].to_i]
-          if pentad_means[row[:PENTAD]][header][row[:HR].to_i] == 0
-            puts header
-            puts row[:DATE_TIME]
-          end
+          data[:data][i][header_sym] = find_running_pentad_mean(pentad_hash, header, row[:MON].to_i, row[:DAY].to_i, row[:HR].to_i, row[:MIN].to_i)
         end
       else
-      
-        # Gather data for spline
-        sample_values = []   
+
+      # Gather data for spline
+        sample_values = []
         gap_start = gap[:gap_indexes].first
         gap_end = gap[:gap_indexes].last
-        
+
         for j in 1..options[:max_adjacent]
           before = gap_start - j
           after = gap_end + j
@@ -540,12 +683,12 @@ def fill_in_missing(data, options={})
           end
           if after <= last_index && !data[:data][after][header_sym].strip.empty?
             sample_values.push({ :time => data[:data][after][:DATE_TIME].to_f, :value => data[:data][after][header_sym].to_f })
-          end
+          end
         end
-        
+
         sample_values = sample_values.sort_by! { |value| value[:time] }
         spline = Spliner::Spliner.new( sample_values.collect {|value| value[:time]}, sample_values.collect {|value| value[:value]} )
-        
+
         # Interpolate using spline
         gap[:gap_indexes].each do |i|
           prediction = spline[data[:data][i][:DATE_TIME].to_f]
@@ -554,12 +697,12 @@ def fill_in_missing(data, options={})
           data[:data][i][header_sym] = prediction.to_s
         end
       end
-      
+
       puts "#{count} / #{num_gaps}"
       count += 1
     end
   end
-   
+
   # Perform a sanity check on the generated DWPF values (must be <= TMPF)
   if gaps.keys.include?("TMPF") && gaps.keys.include?("DWPF")
     gaps["DWPF"].each do |gap|
@@ -567,8 +710,8 @@ def fill_in_missing(data, options={})
         data[:data][i][:DWPF] = data[:data][i][:TMPF] if data[:data][i][:DWPF] > data[:data][i][:TMPF]
       end
     end
-  end 
-   
+  end
+
   # Fill in the generated fields
   (gaps.keys & generated_fields).each do |header|
     header_sym = header.to_sym
@@ -582,7 +725,7 @@ def fill_in_missing(data, options={})
           data[:data][i][header_sym] = (-1 * row[:SKNT].to_f * Math.sin(to_radians(angle))).to_s
         end
       end
-    when "SKNT_N"    
+    when "SKNT_N"
       found_gaps.each do |gap|
         gap[:gap_indexes].each do |i|
           row = data[:data][i]
@@ -605,7 +748,7 @@ def fill_in_missing(data, options={})
           angle = (row[:PDIR].to_f + 450) % 360
           data[:data][i][header_sym] = (-1 * row[:PEAK].to_f * Math.cos(to_radians(angle))).to_s
         end
-      end      
+      end
     when "GUST_E"
       found_gaps.each do |gap|
         gap[:gap_indexes].each do |i|
@@ -647,18 +790,18 @@ def fill_in_missing(data, options={})
       end
     end
   end
-  
+
   if gaps.keys.include?("RELH_CALCULATED")
     found_gaps = gaps["RELH_CALCULATED"]
     found_gaps.each do |gap|
-        gap[:gap_indexes].each do |i|
-          row = data[:data][i]
-          data[:data][i][:RELH_CALCULATED] = (row[:E_ACTUAL].to_f / row[:E_SATURATED].to_f * 100).to_s
-          data[:data][i][:RELH_ERROR] = (row[:RELH_CALCULATED].to_f - row[:RELH].to_f).to_s
-          data[:data][i][:RELH_REL_ERROR] = (row[:RELH_ERROR].to_f / row[:RELH].to_f).to_s
-        end
+      gap[:gap_indexes].each do |i|
+        row = data[:data][i]
+        data[:data][i][:RELH_CALCULATED] = (row[:E_ACTUAL].to_f / row[:E_SATURATED].to_f * 100).to_s
+        data[:data][i][:RELH_ERROR] = (row[:RELH_CALCULATED].to_f - row[:RELH].to_f).to_s
+        data[:data][i][:RELH_REL_ERROR] = (row[:RELH_ERROR].to_f / row[:RELH].to_f).to_s
       end
+    end
   end
- 
+
   return data
 end

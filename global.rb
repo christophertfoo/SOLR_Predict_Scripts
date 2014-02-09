@@ -1,2 +1,2 @@
-$ignore_list = %w[filtered test missing missing_col_all missing_pentad merged merged-old columns filtered-2 merged-2 merged-2-old]
+$ignore_list = %w[filtered test missing missing_col_all missing_pentad merged merged-old columns filtered-2 merged-2 merged-2-old merged-pentad filtered-pentad merged-interpolated filtered-interpolated merged-combo filtered-combo]
 $sources = Dir.glob("*").keep_if do |source| File.directory?(source) && !$ignore_list.include?(source) end

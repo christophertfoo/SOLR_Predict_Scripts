@@ -39,7 +39,9 @@ def load_header_csv(path)
     :DWPF => { :description => "Dew Point", :unit => "degrees F" },
     :RELH_CALCULATED => { :description => "Calculated Relative Humidity", :unit => "%" },
     :RELH_ERROR => { :description => "Error between observed and calculated relative humidity", :unit => "%" },
-    :RELH_REL_ERROR => { :description => "Relative Error between observed and calculated relative humidity", :unit => "" }
+    :RELH_REL_ERROR => { :description => "Relative Error between observed and calculated relative humidity", :unit => "" },
+    :SOLR_FRAC => { :description => "Fraction of the observed SOLR value relative to the climate max", :unit => "" },
+    :SOLR_MAX => { :description => "Maximum SOLR value observed during the climate (+- 2 days)", :unit => "w/(m^2)" }
   })
   return(headers)
 end
@@ -50,11 +52,11 @@ def read_csv_line(file)
 end
 
 def load_source(path, options={})
-  options ={:merged_suffix => "", :suffix => "[0-9][0-9][0-9][0-9]", :write_merged => false, :load_merged => true}.merge(options)
+  options ={:merged_folder_suffix => "", :merged_suffix => "", :suffix => "[0-9][0-9][0-9][0-9]", :write_merged => false, :load_merged => true}.merge(options)
   data = {}
   files = []  
   extra_headers = false
-  files = Dir.glob("merged/#{path}#{options[:merged_suffix]}.csv") if options[:load_merged]  
+  files = Dir.glob("merged#{options[:merged_folder_suffix]}/#{path}#{options[:merged_suffix]}.csv") if options[:load_merged]  
   if files.count == 0
     files = Dir.glob("#{path}/*-#{options[:suffix]}.csv") 
   else

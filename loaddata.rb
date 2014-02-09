@@ -10,6 +10,11 @@ def main
   max_month = nil
   source_data = {}
   interval_data = {}
+  
+  merged_suffix = '-combo'
+  merged_folder = "merged#{merged_suffix}"
+  filtered_folder = "filtered#{merged_suffix}"
+  
   $sources.each do |source|
     puts source
     data = load_source(source, :load_merged => false)
@@ -21,12 +26,19 @@ def main
     puts "Adding missing rows..."
     data = add_missing(data)
     puts "Filling in missing values..."
-    data = fill_in_missing(data)
-    if !Dir.exists? 'merged'
-      Dir.mkdir 'merged'
+    data = fill_in_missing(data, :interpolation => true, :max_interpolation => 5)
+    
+    if data[:headers].include?("SOLR")
+      puts "Calculating SOLR fractions..."
+      pentad_hash = find_running_pentad(data)
+      data = set_solr_fraction(data, pentad_hash)
     end
+    
+    if !Dir.exists? merged_folder
+      Dir.mkdir merged_folder
+    end    
     puts "Writing merged data set to output file..."
-    write_csv("merged/#{source}.csv", data)
+    write_csv("#{merged_folder}/#{source}.csv", data)
     source_data[source.to_sym] = trim(data)
     puts
   end
@@ -48,16 +60,16 @@ def main
   puts
   
   valid_sources.each do |source|
-    data = load_source(source)
+    data = load_source(source, :merged_folder_suffix => merged_suffix)
     original_size = data[:data].count
     data[:data] = data[:data].keep_if do |datum|
       (start_time.nil? || datum[:DATE_TIME] >= start_time) && (end_time.nil? || datum[:DATE_TIME] <= end_time)
     end
     puts "Kept #{data[:data].count} / #{original_size} rows"
-    if !Dir.exists? 'filtered-2'
-      Dir.mkdir 'filtered-2'
+    if !Dir.exists? filtered_folder
+      Dir.mkdir filtered_folder
     end
-    write_csv("filtered-2/#{source}-filtered.csv", data)
+    write_csv("#{filtered_folder}/#{source}.csv", data)
   end
   
 end
