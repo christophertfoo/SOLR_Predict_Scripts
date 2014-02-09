@@ -11,7 +11,7 @@ def main
   source_data = {}
   interval_data = {}
   
-  merged_suffix = '-combo'
+  merged_suffix = '-pentad'
   merged_folder = "merged#{merged_suffix}"
   filtered_folder = "filtered#{merged_suffix}"
   
@@ -26,13 +26,15 @@ def main
     puts "Adding missing rows..."
     data = add_missing(data)
     puts "Filling in missing values..."
-    data = fill_in_missing(data, :interpolation => true, :max_interpolation => 5)
+    data = fill_in_missing(data)
     
     if data[:headers].include?("SOLR")
       puts "Calculating SOLR fractions..."
       pentad_hash = find_running_pentad(data)
       data = set_solr_fraction(data, pentad_hash)
     end
+
+    data = set_pentads(data)
     
     if !Dir.exists? merged_folder
       Dir.mkdir merged_folder
